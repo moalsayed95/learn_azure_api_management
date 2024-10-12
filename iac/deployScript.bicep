@@ -4,7 +4,7 @@
 @description('Azure location where resources should be deployed (e.g., swedencentral)')
 param location string = 'swedencentral'
 
-var prefix = 'hackAPIM'
+var prefix = 'hackapim'
 var suffix = uniqueString(resourceGroup().id)
 var databaseAccountName = '${prefix}-cosmosdb-${suffix}'
 var databaseName = 'callcenter'
