@@ -21,7 +21,7 @@
     }
   },
   "variables": {
-    "prefix": "hackAPIM",
+    "prefix": "hackapim",
     "suffix": "[uniqueString(resourceGroup().id)]",
     "databaseAccountName": "[format('{0}-cosmosdb-{1}', variables('prefix'), variables('suffix'))]",
     "databaseName": "callcenter",
