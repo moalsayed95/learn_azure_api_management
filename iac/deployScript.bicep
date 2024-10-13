@@ -100,7 +100,7 @@ resource searchService 'Microsoft.Search/searchServices@2023-11-01' = {
 
 var aiCognitiveServicesName = '${prefix}-aiservices-${suffix}'
 var aiKeyvaultName = replace('${prefix}-kv-${suffix}', '-', '')
-var aiStorageAccountName = replace('${prefix}-strg-${suffix}', '-', '')
+var aiStorageAccountName = toLower(take(replace('${prefix}-strg-${suffix}', '-', ''), 24))
 var aiHubName = '${prefix}-aistudio-${suffix}'
 var aiHubFriendlyName = 'GenAI Call Center AI Studio'
 var aiHubDescription = 'This is an example AI resource for use in Azure AI Studio.'

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "3520977859051891593"
+      "templateHash": "11519315794056140073"
     }
   },
   "parameters": {
@@ -37,7 +37,7 @@
     "searchServiceName": "[format('{0}-search-{1}', variables('prefix'), variables('suffix'))]",
     "aiCognitiveServicesName": "[format('{0}-aiservices-{1}', variables('prefix'), variables('suffix'))]",
     "aiKeyvaultName": "[replace(format('{0}-kv-{1}', variables('prefix'), variables('suffix')), '-', '')]",
-    "aiStorageAccountName": "[replace(format('{0}-strg-{1}', variables('prefix'), variables('suffix')), '-', '')]",
+    "aiStorageAccountName": "[toLower(take(replace(format('{0}-strg-{1}', variables('prefix'), variables('suffix')), '-', ''), 24))]",
     "aiHubName": "[format('{0}-aistudio-{1}', variables('prefix'), variables('suffix'))]",
     "aiHubFriendlyName": "GenAI Call Center AI Studio",
     "aiHubDescription": "This is an example AI resource for use in Azure AI Studio.",
