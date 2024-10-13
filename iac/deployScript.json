@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "15648157026051478240"
+      "templateHash": "3520977859051891593"
     }
   },
   "parameters": {
@@ -33,9 +33,66 @@
         "failoverPriority": 0,
         "isZoneRedundant": false
       }
-    ]
+    ],
+    "searchServiceName": "[format('{0}-search-{1}', variables('prefix'), variables('suffix'))]",
+    "aiCognitiveServicesName": "[format('{0}-aiservices-{1}', variables('prefix'), variables('suffix'))]",
+    "aiKeyvaultName": "[replace(format('{0}-kv-{1}', variables('prefix'), variables('suffix')), '-', '')]",
+    "aiStorageAccountName": "[replace(format('{0}-strg-{1}', variables('prefix'), variables('suffix')), '-', '')]",
+    "aiHubName": "[format('{0}-aistudio-{1}', variables('prefix'), variables('suffix'))]",
+    "aiHubFriendlyName": "GenAI Call Center AI Studio",
+    "aiHubDescription": "This is an example AI resource for use in Azure AI Studio.",
+    "aiHubProjectName": "CallCenter",
+    "appLogAnalyticsWorkspaceName": "[format('{0}-loganalytics-{1}', variables('prefix'), variables('suffix'))]",
+    "appApplicationInsightsName": "[format('{0}-appinsights-{1}', variables('prefix'), variables('suffix'))]"
   },
   "resources": [
+    {
+      "type": "Microsoft.MachineLearningServices/workspaces/connections",
+      "apiVersion": "2024-07-01-preview",
+      "name": "[format('{0}/{1}', variables('aiHubName'), format('{0}-aiservices', variables('aiHubName')))]",
+      "properties": {
+        "category": "AIServices",
+        "target": "[reference(resourceId('Microsoft.CognitiveServices/accounts', variables('aiCognitiveServicesName')), '2023-05-01').endpoint]",
+        "authType": "ApiKey",
+        "isSharedToAll": true,
+        "useWorkspaceManagedIdentity": true,
+        "credentials": {
+          "key": "[listKeys(resourceId('Microsoft.CognitiveServices/accounts', variables('aiCognitiveServicesName')), '2023-05-01').key1]"
+        },
+        "metadata": {
+          "ApiType": "Azure",
+          "ResourceId": "[resourceId('Microsoft.CognitiveServices/accounts', variables('aiCognitiveServicesName'))]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', variables('aiCognitiveServicesName'))]",
+        "[resourceId('Microsoft.MachineLearningServices/workspaces', variables('aiHubName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.MachineLearningServices/workspaces/connections",
+      "apiVersion": "2024-07-01-preview",
+      "name": "[format('{0}/{1}', variables('aiHubName'), format('{0}-search', variables('aiHubName')))]",
+      "properties": {
+        "category": "CognitiveSearch",
+        "target": "[format('https://{0}.search.windows.net', variables('searchServiceName'))]",
+        "authType": "ApiKey",
+        "isSharedToAll": true,
+        "useWorkspaceManagedIdentity": true,
+        "credentials": {
+          "key": "[listAdminKeys(resourceId('Microsoft.Search/searchServices', variables('searchServiceName')), '2023-11-01').primaryKey]"
+        },
+        "metadata": {
+          "ApiType": "Azure",
+          "ResourceId": "[resourceId('Microsoft.CognitiveServices/accounts', variables('aiCognitiveServicesName'))]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', variables('aiCognitiveServicesName'))]",
+        "[resourceId('Microsoft.MachineLearningServices/workspaces', variables('aiHubName'))]",
+        "[resourceId('Microsoft.Search/searchServices', variables('searchServiceName'))]"
+      ]
+    },
     {
       "type": "Microsoft.DocumentDB/databaseAccounts",
       "apiVersion": "2021-04-15",
@@ -97,6 +154,184 @@
         "publisherEmail": "admin@example.com",
         "publisherName": "Admin"
       }
+    },
+    {
+      "type": "Microsoft.Search/searchServices",
+      "apiVersion": "2023-11-01",
+      "name": "[variables('searchServiceName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "basic"
+      },
+      "properties": {
+        "hostingMode": "default"
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2023-07-01",
+      "name": "[variables('aiKeyvaultName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "createMode": "default",
+        "enabledForDeployment": false,
+        "enabledForDiskEncryption": false,
+        "enabledForTemplateDeployment": false,
+        "enableSoftDelete": true,
+        "enableRbacAuthorization": true,
+        "enablePurgeProtection": true,
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        },
+        "softDeleteRetentionInDays": 7,
+        "tenantId": "[subscription().tenantId]"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('aiStorageAccountName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2"
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('aiCognitiveServicesName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "S0"
+      },
+      "kind": "AIServices",
+      "properties": {
+        "apiProperties": {
+          "statisticsEnabled": false
+        }
+      }
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts/deployments",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}', variables('aiCognitiveServicesName'), 'gpt-4o-mini')]",
+      "properties": {
+        "model": {
+          "format": "OpenAI",
+          "name": "gpt-4o-mini",
+          "version": "2024-07-18"
+        }
+      },
+      "sku": {
+        "name": "GlobalStandard",
+        "capacity": 120
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', variables('aiCognitiveServicesName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts/deployments",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}', variables('aiCognitiveServicesName'), 'text-embedding-ada-002')]",
+      "properties": {
+        "model": {
+          "format": "OpenAI",
+          "name": "text-embedding-ada-002",
+          "version": "2"
+        }
+      },
+      "sku": {
+        "name": "Standard",
+        "capacity": 20
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', variables('aiCognitiveServicesName'))]",
+        "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('aiCognitiveServicesName'), 'gpt-4o-mini')]"
+      ]
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2021-06-01",
+      "name": "[variables('appLogAnalyticsWorkspaceName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "retentionInDays": 30,
+        "features": {
+          "searchVersion": 1
+        },
+        "sku": {
+          "name": "PerGB2018"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[variables('appApplicationInsightsName')]",
+      "location": "[parameters('location')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('appLogAnalyticsWorkspaceName'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('appLogAnalyticsWorkspaceName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.MachineLearningServices/workspaces",
+      "apiVersion": "2024-07-01-preview",
+      "name": "[variables('aiHubName')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "sku": {
+        "name": "Basic",
+        "tier": "Basic"
+      },
+      "kind": "hub",
+      "properties": {
+        "friendlyName": "[variables('aiHubFriendlyName')]",
+        "description": "[variables('aiHubDescription')]",
+        "keyVault": "[resourceId('Microsoft.KeyVault/vaults', variables('aiKeyvaultName'))]",
+        "storageAccount": "[resourceId('Microsoft.Storage/storageAccounts', variables('aiStorageAccountName'))]",
+        "applicationInsights": "[resourceId('Microsoft.Insights/components', variables('appApplicationInsightsName'))]",
+        "publicNetworkAccess": "Enabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('aiKeyvaultName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('aiStorageAccountName'))]",
+        "[resourceId('Microsoft.Insights/components', variables('appApplicationInsightsName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.MachineLearningServices/workspaces",
+      "apiVersion": "2024-07-01-preview",
+      "name": "[variables('aiHubProjectName')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "sku": {
+        "name": "Basic",
+        "tier": "Basic"
+      },
+      "kind": "project",
+      "properties": {
+        "description": "Call Center AI Studio Project",
+        "friendlyName": "Call Center",
+        "hubResourceId": "[resourceId('Microsoft.MachineLearningServices/workspaces', variables('aiHubName'))]",
+        "hbiWorkspace": false,
+        "v1LegacyMode": false,
+        "publicNetworkAccess": "Enabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.MachineLearningServices/workspaces', variables('aiHubName'))]"
+      ]
     }
   ],
   "outputs": {
@@ -123,6 +358,18 @@
     "apiManagementEndpoint": {
       "type": "string",
       "value": "[reference(resourceId('Microsoft.ApiManagement/service', variables('apiManagementName')), '2021-08-01').gatewayUrl]"
+    },
+    "aiCognitiveServicesName": {
+      "type": "string",
+      "value": "[variables('aiCognitiveServicesName')]"
+    },
+    "aiHubName": {
+      "type": "string",
+      "value": "[variables('aiHubName')]"
+    },
+    "aiHubProjectName": {
+      "type": "string",
+      "value": "[variables('aiHubProjectName')]"
     }
   }
 }
